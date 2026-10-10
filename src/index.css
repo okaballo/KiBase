@@ -22,3 +22,10 @@ body {
 
 /* 16px stops iOS Safari from zooming in when an input is focused. */
 input, select { font-size: 16px; }
+
+/* Subtle neon glow for text: a soft halo in the text's own colour.
+   The first line is the fallback for browsers without color-mix(). */
+.glow-text {
+  text-shadow: 0 0 8px currentColor;
+  text-shadow: 0 0 8px color-mix(in srgb, currentColor 55%, transparent);
+}

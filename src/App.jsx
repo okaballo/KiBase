@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useLocalStorage } from './lib/useLocalStorage.js'
 import { SEED_FOODS } from './lib/foods.js'
+import { dayKey, nextTrackingDay } from './lib/calc.js'
 import Home from './tabs/Home.jsx'
 import Plan from './tabs/Plan.jsx'
 import Analytics from './tabs/Analytics.jsx'
@@ -28,13 +29,31 @@ export default function App() {
   const [profile, setProfile] = useLocalStorage('mt.profile', DEFAULT_PROFILE)
   const [meals, setMeals] = useLocalStorage('mt.meals', [])               // newest first
   const [customFoods, setCustomFoods] = useLocalStorage('mt.customFoods', [])
+  const [templates, setTemplates] = useLocalStorage('mt.templates', [])   // saved meal templates
   const [weights, setWeights] = useLocalStorage('mt.weights', [])         // oldest first
+
+  // The day currently being tracked. It is saved, so closing the app or the
+  // clock passing midnight never changes it; only startNewDay() does.
+  const [activeDay, setActiveDay] = useLocalStorage('mt.activeDay', {
+    date: dayKey(),
+    startedAt: new Date().toISOString(),
+  })
+
+  // Finishes the current day and opens a fresh one. Past meals keep their
+  // `day` tag, so the finished day stays intact for Analytics.
+  const startNewDay = () =>
+    setActiveDay((current) => ({
+      date: nextTrackingDay(current.date),
+      startedAt: new Date().toISOString(),
+    }))
 
   const [tab, setTab] = useState('Home')
   const [mealOpen, setMealOpen] = useState(false)
   const [customOpen, setCustomOpen] = useState(false)
 
-  const foods = [...SEED_FOODS, ...customFoods].sort((a, b) => a.name.localeCompare(b.name))
+  const byName = (a, b) => a.name.localeCompare(b.name)
+  const foods = [...SEED_FOODS].sort(byName)        // built-in database
+  const myFoods = [...customFoods].sort(byName)     // user's own items
   const openMeal = () => setMealOpen(true)
   const openCustom = () => setCustomOpen(true)
 
@@ -46,7 +65,9 @@ export default function App() {
       >
         {tab === 'Home' && (
           <Home
-            profile={profile} meals={meals} onAddMeal={openMeal}
+            profile={profile} meals={meals} activeDay={activeDay}
+            onAddMeal={openMeal} onStartNewDay={startNewDay}
+            onSaveTemplate={(template) => setTemplates((list) => [template, ...list])}
             onDeleteMeal={(id) => setMeals((list) => list.filter((m) => m.id !== id))}
           />
         )}
@@ -56,7 +77,7 @@ export default function App() {
             onChange={(patch) => setProfile((p) => ({ ...p, ...patch }))}
           />
         )}
-        {tab === 'Analytics' && <Analytics profile={profile} meals={meals} />}
+        {tab === 'Analytics' && <Analytics profile={profile} meals={meals} activeDay={activeDay} />}
         {tab === 'Weight' && (
           <Weight
             entries={weights}
@@ -89,8 +110,10 @@ export default function App() {
 
       {mealOpen && (
         <AddMealSheet
-          foods={foods}
-          onSave={(meal) => setMeals((list) => [meal, ...list])}
+          foods={foods} customFoods={myFoods} templates={templates}
+          onDeleteTemplate={(id) => setTemplates((list) => list.filter((t) => t.id !== id))}
+          // Tag the meal with the active tracking day, whatever the clock says.
+          onSave={(meal) => setMeals((list) => [{ ...meal, day: activeDay.date }, ...list])}
           onClose={() => setMealOpen(false)}
           onNewCustom={openCustom}
           onDeleteFood={(id) => setCustomFoods((list) => list.filter((f) => f.id !== id))}

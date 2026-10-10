@@ -1,4 +1,5 @@
 // Small reusable building blocks shared by every screen.
+import { useState } from 'react'
 import { fmt0, fmt1 } from '../lib/calc.js'
 
 export const Card = ({ children, className = '' }) => (
@@ -33,15 +34,22 @@ export function CalorieRing({ progress, remaining }) {
   const c = 2 * Math.PI * r
   return (
     <div className="relative mx-auto h-[190px] w-[190px]">
-      <svg viewBox="0 0 190 190" className="-rotate-90">
+      <svg viewBox="0 0 190 190" className="-rotate-90 overflow-visible">
         <defs>
           <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="#b58ff2" />
             <stop offset="1" stopColor="#7851a9" />
           </linearGradient>
+          {/* Soft neon halo: a blurred, part-transparent copy behind the stroke. */}
+          <filter id="ring-glow" filterUnits="userSpaceOnUse" x="-20" y="-20" width="230" height="230">
+            <feGaussianBlur stdDeviation="5" result="blur" />
+            <feComponentTransfer in="blur" result="halo"><feFuncA type="linear" slope="0.6" /></feComponentTransfer>
+            <feMerge><feMergeNode in="halo" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
         </defs>
         <circle cx="95" cy="95" r={r} fill="none" stroke="#7851a9" strokeOpacity=".2" strokeWidth="16" />
         <circle
+          filter="url(#ring-glow)"
           cx="95" cy="95" r={r} fill="none" stroke="url(#ring)" strokeWidth="16" strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - progress)}
@@ -84,13 +92,17 @@ export const StatTile = ({ title, value, unit }) => (
 )
 
 /** Compact "P 24  C 3  F 18" line. */
-export const MacroSummary = ({ macros }) => (
-  <span className="flex gap-2.5 text-xs tabular-nums text-white/60">
-    <span><b className="text-lilac">P</b> {fmt1(macros.protein)}</span>
-    <span><b className="text-carbs">C</b> {fmt1(macros.carbs)}</span>
-    <span><b className="text-fat">F</b> {fmt1(macros.fat)}</span>
-  </span>
-)
+// `glow` turns each value into a softly glowing neon chip.
+export const MacroSummary = ({ macros, glow = false }) => {
+  const chip = glow ? 'glow-text font-medium' : ''
+  return (
+    <span className={`flex gap-2.5 text-xs tabular-nums ${glow ? '' : 'text-white/60'}`}>
+      <span className={glow ? `${chip} text-lilac` : ''}><b className="text-lilac">P</b> {fmt1(macros.protein)}</span>
+      <span className={glow ? `${chip} text-carbs` : ''}><b className="text-carbs">C</b> {fmt1(macros.carbs)}</span>
+      <span className={glow ? `${chip} text-fat` : ''}><b className="text-fat">F</b> {fmt1(macros.fat)}</span>
+    </span>
+  )
+}
 
 /** Labelled input row: "Protein ........ [ 0 ] g". */
 export const FieldRow = ({ label, unit, ...input }) => (
@@ -140,6 +152,64 @@ export function Sheet({ title, onClose, action, children, z = 'z-40' }) {
       >
         {children}
       </div>
+    </div>
+  )
+}
+
+/** Centered confirmation dialog. Cancel is the safe, default-looking choice. */
+export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCancel }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm"
+      role="dialog" aria-modal="true" aria-label={title}
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-xs rounded-3xl border border-white/10 bg-card p-5 text-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-[17px] font-semibold">{title}</h2>
+        <p className="mt-2 text-sm text-white/60">{message}</p>
+        <div className="mt-5 flex gap-3">
+          <button onClick={onCancel} className="flex-1 rounded-2xl bg-field py-3 font-medium">Cancel</button>
+          <button onClick={onConfirm} className="flex-1 rounded-2xl bg-royal py-3 font-semibold">{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Dialog that asks for a name (used when saving a meal as a template). */
+export function NameDialog({ title, message, initial = '', confirmLabel, onConfirm, onCancel }) {
+  const [name, setName] = useState(initial)
+  const trimmed = name.trim()
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm"
+      role="dialog" aria-modal="true" aria-label={title}
+      onClick={onCancel}
+    >
+      <form
+        className="w-full max-w-xs rounded-3xl border border-white/10 bg-card p-5 text-center"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={(e) => { e.preventDefault(); if (trimmed) onConfirm(trimmed) }}
+      >
+        <h2 className="text-[17px] font-semibold">{title}</h2>
+        {message && <p className="mt-2 text-sm text-white/60">{message}</p>}
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Template name"
+          aria-label="Template name"
+          className="mt-4 w-full rounded-xl bg-field px-3.5 py-2.5 outline-none placeholder:text-white/30"
+        />
+        <div className="mt-4 flex gap-3">
+          <button type="button" onClick={onCancel} className="flex-1 rounded-2xl bg-field py-3 font-medium">Cancel</button>
+          <button type="submit" disabled={!trimmed} className="flex-1 rounded-2xl bg-royal py-3 font-semibold disabled:opacity-35">
+            {confirmLabel}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }

@@ -41,6 +41,34 @@ export const dayKey = (date = new Date()) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
+// ---- Manual tracking days ---------------------------------------------------
+// A "tracking day" is a label ("YYYY-MM-DD") that only changes when the user
+// taps Start New Day. The clock never changes it.
+
+/** "YYYY-MM-DD" -> local Date (avoids the UTC shift of new Date(string)). */
+export const parseDay = (key) => {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+/** The tracking day a meal belongs to. Meals logged before this feature
+ *  existed have no `day`, so they fall back to their calendar date. */
+export const mealDay = (meal) => meal.day ?? dayKey(meal.date)
+
+/**
+ * Label for the day that starts when the user taps Start New Day:
+ * today's calendar date, or the day after the current one if that is later.
+ * This keeps every tracking day unique, e.g. finishing Saturday at 1 AM on
+ * Sunday starts "Sunday"; finishing Saturday early at 10 PM also starts "Sunday".
+ */
+export const nextTrackingDay = (activeDate, now = new Date()) => {
+  const next = parseDay(activeDate)
+  next.setDate(next.getDate() + 1)
+  const dayAfter = dayKey(next)
+  const today = dayKey(now)
+  return dayAfter > today ? dayAfter : today
+}
+
 // ---- TDEE ----------------------------------------------------------------
 
 export const ACTIVITY = [
@@ -83,14 +111,17 @@ const firstWeekday = () => {
   }
 }
 
-/** Seven { date, label, totals } entries for the current week. */
-export const currentWeek = (meals, now = new Date()) => {
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+/**
+ * Seven { date, label, totals } entries for the week containing the active
+ * tracking day. Meals are grouped by their tracking day, not by the clock.
+ */
+export const currentWeek = (meals, activeDate = dayKey()) => {
+  const start = parseDay(activeDate)
   start.setDate(start.getDate() - ((start.getDay() - firstWeekday() + 7) % 7))
 
   const byDay = {}
   for (const meal of meals) {
-    const key = dayKey(meal.date)
+    const key = mealDay(meal)
     byDay[key] = add(byDay[key] || ZERO, mealTotals(meal))
   }
 

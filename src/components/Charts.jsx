@@ -22,6 +22,12 @@ export function BarChart({ days, goal }) {
           <stop offset="0" stopColor="#b58ff2" />
           <stop offset="1" stopColor="#7851a9" />
         </linearGradient>
+        {/* Soft neon halo behind the bars. */}
+        <filter id="bar-glow" filterUnits="userSpaceOnUse" x="0" y="0" width={W} height={H}>
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feComponentTransfer in="blur" result="halo"><feFuncA type="linear" slope="0.55" /></feComponentTransfer>
+          <feMerge><feMergeNode in="halo" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
       </defs>
 
       {[0, 0.5, 1].map((t) => (
@@ -38,7 +44,7 @@ export function BarChart({ days, goal }) {
         const h = Math.max(y(0) - y(d.value), 0)
         return (
           <g key={i}>
-            {h > 0 && <rect x={x} y={y(d.value)} width={barW} height={h} rx="5" fill="url(#bar)" />}
+            {h > 0 && <rect x={x} y={y(d.value)} width={barW} height={h} rx="5" fill="url(#bar)" filter="url(#bar-glow)" />}
             <text x={x + barW / 2} y={H - 7} textAnchor="middle" fontSize="10" fill="#fff" fillOpacity=".6">
               {d.label}
             </text>
@@ -84,6 +90,13 @@ export function LineChart({ points }) {
           <stop offset="0" stopColor="#7851a9" stopOpacity=".45" />
           <stop offset="1" stopColor="#7851a9" stopOpacity="0" />
         </linearGradient>
+        {/* Soft neon halo behind the trend line. userSpaceOnUse keeps it
+            working even when the line is perfectly flat. */}
+        <filter id="line-glow" filterUnits="userSpaceOnUse" x="0" y="0" width={W} height={H}>
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feComponentTransfer in="blur" result="halo"><feFuncA type="linear" slope="0.55" /></feComponentTransfer>
+          <feMerge><feMergeNode in="halo" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
       </defs>
 
       {[0, 0.5, 1].map((t) => {
@@ -99,8 +112,10 @@ export function LineChart({ points }) {
       })}
 
       <polygon points={area} fill="url(#area)" />
-      <polyline points={line} fill="none" stroke="#b58ff2" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      {coords.map(([px, py], i) => <circle key={i} cx={px} cy={py} r="3.5" fill="#b58ff2" />)}
+      <g filter="url(#line-glow)">
+        <polyline points={line} fill="none" stroke="#b58ff2" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        {coords.map(([px, py], i) => <circle key={i} cx={px} cy={py} r="3.5" fill="#b58ff2" />)}
+      </g>
 
       <text x={LEFT} y={H - 7} fontSize="10" fill="#fff" fillOpacity=".6">{label(points[0].date)}</text>
       {span > 0 && (

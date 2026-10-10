@@ -3,8 +3,9 @@ import { ZERO, add, currentWeek, num, fmt0 } from '../lib/calc.js'
 import { Card, SectionTitle, PageTitle, StatTile, MacroBar } from '../components/ui.jsx'
 import { BarChart } from '../components/Charts.jsx'
 
-export default function Analytics({ profile, meals }) {
-  const days = currentWeek(meals)
+export default function Analytics({ profile, meals, activeDay }) {
+  // Days are the manually finished tracking days, anchored on the active one.
+  const days = currentWeek(meals, activeDay.date)
   const total = days.reduce((t, d) => add(t, d.totals), ZERO)
 
   // Average over days that have data, so unlogged and future days

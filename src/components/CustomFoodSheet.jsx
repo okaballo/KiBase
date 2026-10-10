@@ -15,8 +15,8 @@ export default function CustomFoodSheet({ onSave, onClose }) {
   const estimated = protein * 4 + carbs * 4 + fat * 9
   const calories = form.calories.trim() ? num(form.calories) : estimated
 
-  // Macros can't add up to more than 100 g per 100 g.
-  const canSave = form.name.trim() && calories > 0 && protein + carbs + fat <= 100
+  // No upper limits: any non-negative numbers are accepted.
+  const canSave = form.name.trim() && Math.min(calories, protein, carbs, fat) >= 0
 
   const save = () => {
     onSave({ id: crypto.randomUUID(), name: form.name.trim(), calories, protein, carbs, fat, custom: true })

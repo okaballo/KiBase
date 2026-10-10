@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+/* Design tokens: black background with Royal Purple as the accent. */
+@theme {
+  --color-royal: #7851a9;   /* Royal Purple */
+  --color-lilac: #b58ff2;   /* lighter tint for text and gradients */
+  --color-card: #17171c;
+  --color-field: #26262e;
+  --color-carbs: #8c9eff;
+  --color-fat: #ed85d9;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  background: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* 16px stops iOS Safari from zooming in when an input is focused. */
+input, select { font-size: 16px; }

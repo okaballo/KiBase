@@ -1,6 +1,6 @@
 // Analytics tab: this week's calories, weekly total and daily average.
 import { ZERO, add, currentWeek, num, fmt0 } from '../lib/calc.js'
-import { Card, SectionTitle, PageTitle, StatTile, MacroBar } from '../components/ui.jsx'
+import { Card, SectionTitle, PageTitle, StatTile, MacroBar, muted } from '../components/ui.jsx'
 import { BarChart } from '../components/Charts.jsx'
 
 export default function Analytics({ profile, meals, activeDay }) {
@@ -35,10 +35,10 @@ export default function Analytics({ profile, meals, activeDay }) {
       <Card className="space-y-4">
         <div className="flex items-center justify-between">
           <SectionTitle>Average Daily Macros</SectionTitle>
-          <span className="text-xs text-white/60">{logged} of 7 days logged</span>
+          <span className={`text-xs ${muted}`}>{logged} of 7 days logged</span>
         </div>
         {logged === 0 ? (
-          <p className="text-sm text-white/60">Log a meal to see your weekly averages.</p>
+          <p className={`text-sm ${muted}`}>Log a meal to see your weekly averages.</p>
         ) : (
           <>
             <MacroBar label="Protein" value={avg(total.protein)} goal={num(profile.proteinGoal)} color="bg-lilac" />

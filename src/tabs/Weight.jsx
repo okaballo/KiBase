@@ -1,7 +1,9 @@
 // Weight tab: log a weight with a date and see the trend line.
 import { useState } from 'react'
 import { num, fmt1, dayKey } from '../lib/calc.js'
-import { Card, SectionTitle, PageTitle, PrimaryButton, StatTile, FieldRow } from '../components/ui.jsx'
+import {
+  Card, SectionTitle, PageTitle, PrimaryButton, StatTile, FieldRow, muted, faint, accentText, fieldBg,
+} from '../components/ui.jsx'
 import { LineChart } from '../components/Charts.jsx'
 
 export default function Weight({ entries, onAdd, onDelete }) {
@@ -33,12 +35,12 @@ export default function Weight({ entries, onAdd, onDelete }) {
       <Card className="space-y-3.5">
         <SectionTitle>Log Weight</SectionTitle>
         <FieldRow label="Weight" unit="kg" placeholder="0.0" value={weight} onChange={(e) => setWeight(e.target.value)} />
-        <label className="flex items-center rounded-xl bg-field px-3.5 py-2.5">
+        <label className={`flex items-center rounded-xl px-3.5 py-2.5 ${fieldBg}`}>
           <span className="flex-1">Date</span>
           <input
             type="date" value={date} max={dayKey()}
             onChange={(e) => setDate(e.target.value)}
-            className="bg-transparent text-right text-lilac outline-none [color-scheme:dark]"
+            className={`bg-transparent text-right outline-none ${accentText}`}
           />
         </label>
         <PrimaryButton onClick={save} disabled={!canSave}>Save Entry</PrimaryButton>
@@ -47,7 +49,7 @@ export default function Weight({ entries, onAdd, onDelete }) {
       <Card>
         <SectionTitle>Trend</SectionTitle>
         {entries.length === 0 ? (
-          <p className="py-10 text-center text-sm text-white/60">Your trend line appears after your first entry.</p>
+          <p className={`py-10 text-center text-sm ${muted}`}>Your trend line appears after your first entry.</p>
         ) : (
           <div className="mt-3">
             <LineChart points={entries.map((e) => ({ date: e.date, value: e.kg }))} />
@@ -64,12 +66,8 @@ export default function Weight({ entries, onAdd, onDelete }) {
                 <span className="flex-1">
                   {new Date(entry.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
                 </span>
-                <span className="tabular-nums text-lilac">{fmt1(entry.kg)} kg</span>
-                <button
-                  onClick={() => onDelete(entry.id)}
-                  aria-label="Delete entry"
-                  className="pl-3 text-xl leading-none text-white/40"
-                >
+                <span className={`tabular-nums ${accentText}`}>{fmt1(entry.kg)} kg</span>
+                <button onClick={() => onDelete(entry.id)} aria-label="Delete entry" className={`pl-3 text-xl leading-none ${faint}`}>
                   ×
                 </button>
               </li>

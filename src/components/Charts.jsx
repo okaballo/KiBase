@@ -16,7 +16,7 @@ export function BarChart({ days, goal }) {
   const barW = slot * 0.6
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Calories per day this week">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full text-zinc-900 dark:text-white" role="img" aria-label="Calories per day this week">
       <defs>
         <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#b58ff2" />
@@ -32,8 +32,8 @@ export function BarChart({ days, goal }) {
 
       {[0, 0.5, 1].map((t) => (
         <g key={t}>
-          <line x1={LEFT} x2={W} y1={y(max * t)} y2={y(max * t)} stroke="#fff" strokeOpacity=".08" />
-          <text x={LEFT - 6} y={y(max * t) + 3} textAnchor="end" fontSize="9" fill="#fff" fillOpacity=".6">
+          <line x1={LEFT} x2={W} y1={y(max * t)} y2={y(max * t)} stroke="currentColor" strokeOpacity=".08" />
+          <text x={LEFT - 6} y={y(max * t) + 3} textAnchor="end" fontSize="9" fill="currentColor" fillOpacity=".6">
             {fmt0(max * t)}
           </text>
         </g>
@@ -45,7 +45,7 @@ export function BarChart({ days, goal }) {
         return (
           <g key={i}>
             {h > 0 && <rect x={x} y={y(d.value)} width={barW} height={h} rx="5" fill="url(#bar)" filter="url(#bar-glow)" />}
-            <text x={x + barW / 2} y={H - 7} textAnchor="middle" fontSize="10" fill="#fff" fillOpacity=".6">
+            <text x={x + barW / 2} y={H - 7} textAnchor="middle" fontSize="10" fill="currentColor" fillOpacity=".6">
               {d.label}
             </text>
           </g>
@@ -54,8 +54,8 @@ export function BarChart({ days, goal }) {
 
       {goal > 0 && (
         <g>
-          <line x1={LEFT} x2={W} y1={y(goal)} y2={y(goal)} stroke="#fff" strokeOpacity=".45" strokeDasharray="5 4" />
-          <text x={W} y={y(goal) - 4} textAnchor="end" fontSize="9" fill="#fff" fillOpacity=".6">
+          <line x1={LEFT} x2={W} y1={y(goal)} y2={y(goal)} stroke="currentColor" strokeOpacity=".45" strokeDasharray="5 4" />
+          <text x={W} y={y(goal) - 4} textAnchor="end" fontSize="9" fill="currentColor" fillOpacity=".6">
             Goal {fmt0(goal)}
           </text>
         </g>
@@ -84,7 +84,7 @@ export function LineChart({ points }) {
   const label = (date) => new Date(date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Weight trend">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full text-zinc-900 dark:text-white" role="img" aria-label="Weight trend">
       <defs>
         <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#7851a9" stopOpacity=".45" />
@@ -103,8 +103,8 @@ export function LineChart({ points }) {
         const v = lo + (hi - lo) * t
         return (
           <g key={t}>
-            <line x1={LEFT} x2={W} y1={y(v)} y2={y(v)} stroke="#fff" strokeOpacity=".08" />
-            <text x={LEFT - 6} y={y(v) + 3} textAnchor="end" fontSize="9" fill="#fff" fillOpacity=".6">
+            <line x1={LEFT} x2={W} y1={y(v)} y2={y(v)} stroke="currentColor" strokeOpacity=".08" />
+            <text x={LEFT - 6} y={y(v) + 3} textAnchor="end" fontSize="9" fill="currentColor" fillOpacity=".6">
               {fmt1(v)}
             </text>
           </g>
@@ -117,9 +117,9 @@ export function LineChart({ points }) {
         {coords.map(([px, py], i) => <circle key={i} cx={px} cy={py} r="3.5" fill="#b58ff2" />)}
       </g>
 
-      <text x={LEFT} y={H - 7} fontSize="10" fill="#fff" fillOpacity=".6">{label(points[0].date)}</text>
+      <text x={LEFT} y={H - 7} fontSize="10" fill="currentColor" fillOpacity=".6">{label(points[0].date)}</text>
       {span > 0 && (
-        <text x={W - 8} y={H - 7} textAnchor="end" fontSize="10" fill="#fff" fillOpacity=".6">
+        <text x={W - 8} y={H - 7} textAnchor="end" fontSize="10" fill="currentColor" fillOpacity=".6">
           {label(points[points.length - 1].date)}
         </text>
       )}

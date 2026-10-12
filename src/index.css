@@ -1,31 +1,42 @@
 @import "tailwindcss";
 
-/* Design tokens: black background with Royal Purple as the accent. */
+/* Dark mode follows a "dark" class on <html> (set from the saved theme), so
+   every `dark:` variant obeys the in-app toggle rather than the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens. Royal Purple is the accent in both themes. */
 @theme {
-  --color-royal: #7851a9;   /* Royal Purple */
-  --color-lilac: #b58ff2;   /* lighter tint for text and gradients */
-  --color-card: #17171c;
-  --color-field: #26262e;
+  --color-royal: #7851a9;       /* Royal Purple */
+  --color-lilac: #b58ff2;       /* lighter tint, used on dark backgrounds */
+  --color-card: #17171c;        /* dark card */
+  --color-field: #26262e;       /* dark input */
+  --color-canvas: #f2f2f7;      /* light page background */
   --color-carbs: #8c9eff;
+  --color-carbs-deep: #5468e0;  /* carbs text on light backgrounds */
   --color-fat: #ed85d9;
+  --color-fat-deep: #c2409f;    /* fats text on light backgrounds */
 }
 
 html, body, #root { height: 100%; }
+:root { color-scheme: light; }
+:root.dark { color-scheme: dark; }
 
 body {
-  background: #000;
-  color: #fff;
+  background: var(--color-canvas);
+  color: #18181b;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+  transition: background-color .3s ease, color .3s ease;
 }
+.dark body { background: #000; color: #fff; }
 
 /* 16px stops iOS Safari from zooming in when an input is focused. */
 input, select { font-size: 16px; }
 
-/* Subtle neon glow for text: a soft halo in the text's own colour.
+/* Subtle neon glow for text (dark mode only; on white it just looks blurry).
    The first line is the fallback for browsers without color-mix(). */
-.glow-text {
+.dark .glow-text {
   text-shadow: 0 0 8px currentColor;
   text-shadow: 0 0 8px color-mix(in srgb, currentColor 55%, transparent);
 }

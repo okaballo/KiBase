@@ -1,6 +1,6 @@
 {
-  "name": "MacroTrack",
-  "short_name": "MacroTrack",
+  "name": "KiBase",
+  "short_name": "KiBase",
   "description": "Offline calorie and macro tracker",
   "start_url": "./",
   "scope": "./",

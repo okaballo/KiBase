@@ -5,7 +5,7 @@
     <!-- viewport-fit=cover lets the app draw under the iPhone notch / home bar -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#000000" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
 
     <!-- PWA -->
     <link rel="manifest" href="./manifest.json" />
@@ -16,11 +16,19 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="MacroTrack" />
+    <meta name="apple-mobile-web-app-title" content="KiBase" />
 
-    <title>MacroTrack</title>
-    <script type="module" crossorigin src="/calorie-app/assets/index-CxR9yVTg.js"></script>
-    <link rel="stylesheet" crossorigin href="/calorie-app/assets/index-DSY3eooD.css">
+    <title>KiBase</title>
+
+    <!-- Apply the saved theme before the first paint so there is no flash.
+         Dark is the default. -->
+    <script>
+      try {
+        if (JSON.parse(localStorage.getItem("mt.theme") || "\"dark\"") === "dark") document.documentElement.classList.add("dark")
+      } catch (e) { document.documentElement.classList.add("dark") }
+    </script>
+    <script type="module" crossorigin src="/calorie-app/assets/index-CttZeo_u.js"></script>
+    <link rel="stylesheet" crossorigin href="/calorie-app/assets/index-DKnYEP9p.css">
   </head>
   <body>
     <div id="root"></div>

@@ -1,4 +1,5 @@
 // All the maths and formatting lives here, so components only display results.
+import { locale } from './i18n.js'
 
 export const ZERO = { calories: 0, protein: 0, carbs: 0, fat: 0 }
 
@@ -130,8 +131,128 @@ export const currentWeek = (meals, activeDate = dayKey()) => {
     date.setDate(start.getDate() + i)
     return {
       date,
-      label: date.toLocaleDateString(undefined, { weekday: 'short' }),
+      label: date.toLocaleDateString(locale(), { weekday: 'short' }),
       totals: byDay[dayKey(date)] || ZERO,
     }
   })
+}
+
+// ---- Batch meal divider --------------------------------------------------
+
+/**
+ * Splits a batch into portions.
+ *   totals    macros of all ingredients together
+ *   rawGrams  sum of the ingredient weights
+ *   portions  how many portions the batch is divided into
+ */
+export const divideBatch = (totals, rawGrams, portions) => {
+  const n = Math.max(portions, 1)
+  return {
+    weight: rawGrams,
+    portionGrams: rawGrams / n,
+    perPortion: scale(totals, 100 / n),                            // totals ÷ n
+    per100g: rawGrams > 0 ? scale(totals, 10000 / rawGrams) : ZERO, // totals × 100 / weight
+  }
+}
+
+// ---- Analytics periods ---------------------------------------------------
+
+export const INTERVALS = ['Week', 'Month', '6 Months', 'Year']
+
+/**
+ * Chart data for the period around the active tracking day.
+ *   Week      7 daily bars (the week containing the active day)
+ *   Month     one bar per day of the active day's month
+ *   6 Months  6 monthly bars ending with the active month
+ *   Year      12 monthly bars ending with the active month
+ * A monthly bar is the AVERAGE calories per logged day in that month, so it
+ * reads against the same daily goal line as the daily bars.
+ *
+ * Returns { bars: [{ label, value }], total, logged, elapsed, range, monthly,
+ *           burned, maintenanceTotal, finished }
+ *   total    summed macros over the whole period
+ *   logged   days in the period with at least one meal
+ *   elapsed  days in the period up to and including the active day
+ *
+ * Calories burned (deficit), per day: maintenance - eaten (negative when you
+ * ate above maintenance). Summed over FINISHED days that have meals logged:
+ *   - the active day is left out until you start a new day, otherwise its
+ *     whole maintenance would count as "burned" before you've eaten dinner
+ *   - days with nothing logged are left out, because an unlogged day is
+ *     missing data, not a day of eating 0 kcal
+ *   maintenanceTotal  maintenance x those same days, the baseline to compare
+ */
+export const periodStats = (meals, activeDate, interval, maintenance = 0) => {
+  const byDay = {}
+  for (const meal of meals) {
+    const key = mealDay(meal)
+    byDay[key] = add(byDay[key] || ZERO, mealTotals(meal))
+  }
+
+  const anchor = parseDay(activeDate)
+  const y = anchor.getFullYear()
+  const m = anchor.getMonth()
+  let start
+  let end
+  if (interval === 'Week') {
+    start = new Date(anchor)
+    start.setDate(start.getDate() - ((start.getDay() - firstWeekday() + 7) % 7))
+    end = new Date(start)
+    end.setDate(start.getDate() + 6)
+  } else if (interval === 'Month') {
+    start = new Date(y, m, 1)
+    end = new Date(y, m + 1, 0)
+  } else {
+    const months = interval === 'Year' ? 12 : 6
+    start = new Date(y, m - (months - 1), 1)
+    end = new Date(y, m + 1, 0)
+  }
+
+  // Every day in the range with its totals.
+  const days = []
+  for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const key = dayKey(d)
+    days.push({ date: new Date(d), key, totals: byDay[key] || ZERO })
+  }
+
+  const total = days.reduce((t, d) => add(t, d.totals), ZERO)
+  const logged = days.filter((d) => d.totals.calories > 0).length
+  const elapsed = days.filter((d) => d.key <= activeDate).length
+  const monthly = interval === '6 Months' || interval === 'Year'
+
+  const finishedDays = days.filter((d) => d.key < activeDate && d.totals.calories > 0)
+  const burned = finishedDays.reduce((sum, d) => sum + (maintenance - d.totals.calories), 0)
+  const maintenanceTotal = maintenance * finishedDays.length
+
+  let bars
+  if (!monthly) {
+    bars = days.map((d) => ({
+      label: interval === 'Week'
+        ? d.date.toLocaleDateString(locale(), { weekday: 'short' })
+        : String(d.date.getDate()),
+      value: d.totals.calories,
+    }))
+  } else {
+    const groups = new Map() // "YYYY-MM" -> { date, sum, logged }
+    for (const d of days) {
+      const k = d.key.slice(0, 7)
+      const g = groups.get(k) || { date: d.date, sum: 0, logged: 0 }
+      g.sum += d.totals.calories
+      if (d.totals.calories > 0) g.logged += 1
+      groups.set(k, g)
+    }
+    bars = [...groups.values()].map((g) => ({
+      label: g.date.toLocaleDateString(locale(), { month: 'short' }),
+      value: g.logged ? g.sum / g.logged : 0,
+    }))
+  }
+
+  const fmt = (d, opts) => d.toLocaleDateString(locale(), opts)
+  const range = interval === 'Week'
+    ? `${fmt(start, { day: 'numeric', month: 'short' })} – ${fmt(end, { day: 'numeric', month: 'short' })}`
+    : interval === 'Month'
+      ? fmt(start, { month: 'long', year: 'numeric' })
+      : `${fmt(start, { month: 'short', year: 'numeric' })} – ${fmt(end, { month: 'short', year: 'numeric' })}`
+
+  return { bars, total, logged, elapsed, range, monthly, burned, maintenanceTotal, finished: finishedDays.length }
 }

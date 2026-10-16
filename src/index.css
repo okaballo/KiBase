@@ -40,3 +40,4 @@ input, select { font-size: 16px; }
   text-shadow: 0 0 8px currentColor;
   text-shadow: 0 0 8px color-mix(in srgb, currentColor 55%, transparent);
 }
+

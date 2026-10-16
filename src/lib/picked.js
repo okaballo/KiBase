@@ -9,6 +9,18 @@ export const STEP_GRAMS = 25
 
 const round1 = (n) => Math.round(n * 10) / 10
 
+/** Saved meal/template items -> picker entries, so they can be edited. */
+export const toPicked = (items) =>
+  items.map((item) => ({ key: crypto.randomUUID(), food: item, grams: String(item.grams) }))
+
+/** Picker entries -> saved items. Per-100 g values are COPIED in, so later
+ *  edits to a custom food never change meals already logged. */
+export const toItems = (picked) =>
+  picked.map(({ food, grams }) => ({
+    name: food.name, grams: num(grams),
+    calories: food.calories, protein: food.protein, carbs: food.carbs, fat: food.fat,
+  }))
+
 /** Changes one food's grams by `delta`; removes it when it reaches 0. */
 export const stepFood = (list, foodId, delta) =>
   list.flatMap((p) => {

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { num, fmt0 } from '../lib/calc.js'
 import { Card, SectionTitle, FieldRow, PrimaryButton, Sheet, TextInput, ConfirmDialog, muted } from './ui.jsx'
+import { t } from '../lib/i18n.js'
 
 const text = (n) => (n === undefined || n === null ? '' : String(n))
 
@@ -14,6 +15,7 @@ export default function CustomFoodSheet({ food, onSave, onDelete, onClose }) {
     carbs: text(food?.carbs),
     fat: text(food?.fat),
     calories: text(food?.calories),
+    serving: text(food?.servingGrams),
   }))
   const [confirmDelete, setConfirmDelete] = useState(false)
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
@@ -29,41 +31,49 @@ export default function CustomFoodSheet({ food, onSave, onDelete, onClose }) {
   const canSave = form.name.trim() && Math.min(calories, protein, carbs, fat) >= 0
 
   const save = () => {
-    onSave({ id: food?.id ?? crypto.randomUUID(), name: form.name.trim(), calories, protein, carbs, fat, custom: true })
+    const serving = num(form.serving)
+    onSave({
+      ...food, // keeps extra fields, e.g. batch info from the Meal Divider
+      id: food?.id ?? crypto.randomUUID(),
+      name: form.name.trim(), calories, protein, carbs, fat, custom: true,
+      servingGrams: serving > 0 ? serving : undefined, // default grams when logging
+    })
     onClose()
   }
 
   return (
-    <Sheet title={editing ? 'Edit Custom Item' : 'Custom Meal'} onClose={onClose} z="z-50">
+    <Sheet title={t(editing ? 'Edit Custom Item' : 'Custom Meal')} onClose={onClose} z="z-50">
       <Card className="space-y-3.5">
-        <SectionTitle>{editing ? food.name : 'Create a custom meal'}</SectionTitle>
+        <SectionTitle>{editing ? t(food.name) : t('Create a custom meal')}</SectionTitle>
         <p className={`text-[13px] ${muted}`}>
-          Enter the values per 100 g. When you log it later you only type the grams.
+          {t('Enter the values per 100 g. When you log it later you only type the grams.')}
         </p>
-        <TextInput value={form.name} onChange={set('name')} placeholder="Name (e.g. Chicken Rice Bowl)" />
-        <FieldRow label="Protein" unit="g" placeholder="0" value={form.protein} onChange={set('protein')} />
-        <FieldRow label="Carbs" unit="g" placeholder="0" value={form.carbs} onChange={set('carbs')} />
-        <FieldRow label="Fats" unit="g" placeholder="0" value={form.fat} onChange={set('fat')} />
+        <TextInput value={form.name} onChange={set('name')} placeholder={t('Name (e.g. Chicken Rice Bowl)')} />
+        <FieldRow label={t('Protein')} unit={t('g')} placeholder="0" value={form.protein} onChange={set('protein')} />
+        <FieldRow label={t('Carbs')} unit={t('g')} placeholder="0" value={form.carbs} onChange={set('carbs')} />
+        <FieldRow label={t('Fats')} unit={t('g')} placeholder="0" value={form.fat} onChange={set('fat')} />
         <FieldRow
-          label="Calories" unit="kcal"
+          label={t('Calories')} unit={t('kcal')}
           placeholder={estimated > 0 ? fmt0(estimated) : '0'}
           value={form.calories} onChange={set('calories')}
         />
-        <p className={`text-xs ${muted}`}>Leave calories empty to calculate them from the macros.</p>
+        <p className={`text-xs ${muted}`}>{t('Leave calories empty to calculate them from the macros.')}</p>
+        <FieldRow label={t('Portion size')} unit={t('g')} placeholder="100" value={form.serving} onChange={set('serving')} />
+        <p className={`text-xs ${muted}`}>{t('Optional. Logging this item starts at one portion instead of 100 g.')}</p>
       </Card>
 
-      <PrimaryButton onClick={save} disabled={!canSave}>{editing ? 'Save Changes' : 'Save Custom Meal'}</PrimaryButton>
+      <PrimaryButton onClick={save} disabled={!canSave}>{t(editing ? 'Save Changes' : 'Save Custom Meal')}</PrimaryButton>
       {editing && (
         <button onClick={() => setConfirmDelete(true)} className="w-full py-2 text-sm font-medium text-fat-deep dark:text-fat">
-          Delete item
+          {t('Delete item')}
         </button>
       )}
 
       {confirmDelete && (
         <ConfirmDialog
-          title={`Delete ${food.name}?`}
-          message="Meals you already logged with it are not affected."
-          confirmLabel="Delete"
+          title={t('Delete {name}?', { name: t(food.name) })}
+          message={t('Meals you already logged with it are not affected.')}
+          confirmLabel={t('Delete')}
           onCancel={() => setConfirmDelete(false)}
           onConfirm={() => { onDelete(food.id); onClose() }}
         />

@@ -1,7 +1,9 @@
 // Shared building blocks. Every colour is given for light mode first and for
 // dark mode with a `dark:` variant, so the whole app follows the theme toggle.
 import { useState } from 'react'
+import { motion, useDragControls, useMotionValue, useReducedMotion, useTransform } from 'framer-motion'
 import { fmt0, fmt1 } from '../lib/calc.js'
+import { t, isRTL } from '../lib/i18n.js'
 
 // ---- Theme-aware class sets (used across screens) -------------------------
 
@@ -59,13 +61,13 @@ export const FieldRow = ({ label, unit, ...input }) => (
     <input
       inputMode="decimal"
       {...input}
-      className={`w-24 bg-transparent text-right tabular-nums outline-none ${placeholder}`}
+      className={`w-24 bg-transparent text-end tabular-nums outline-none ${placeholder}`}
     />
-    <span className={`w-10 pl-2 ${muted}`}>{unit}</span>
+    <span className={`w-10 ps-2 ${muted}`}>{unit}</span>
   </label>
 )
 
-/** iOS-style segmented control. */
+/** iOS-style segmented control. Options are English keys, shown translated. */
 export const Segmented = ({ options, value, onChange }) => (
   <div className={`flex rounded-xl p-1 ${fieldBg}`}>
     {options.map((option) => (
@@ -76,7 +78,7 @@ export const Segmented = ({ options, value, onChange }) => (
           value === option ? 'bg-royal text-white shadow-sm' : muted
         }`}
       >
-        {option}
+        {t(option)}
       </button>
     ))}
   </div>
@@ -98,7 +100,7 @@ export const Stepper = ({ value, onMinus, onPlus, label }) => (
   <div className="flex shrink-0 items-center rounded-full bg-royal/10 dark:bg-royal/25">
     <button
       onClick={onMinus}
-      aria-label={`Less ${label}`}
+      aria-label={t('Less {name}', { name: label })}
       className={`flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none transition active:scale-90 ${accentText}`}
     >
       −
@@ -106,7 +108,7 @@ export const Stepper = ({ value, onMinus, onPlus, label }) => (
     <span className="min-w-12 text-center text-xs font-semibold tabular-nums">{value}</span>
     <button
       onClick={onPlus}
-      aria-label={`More ${label}`}
+      aria-label={t('More {name}', { name: label })}
       className="flex h-8 w-8 items-center justify-center rounded-full bg-royal text-lg leading-none text-white transition active:scale-90"
     >
       +
@@ -114,8 +116,9 @@ export const Stepper = ({ value, onMinus, onPlus, label }) => (
   </div>
 )
 
+/** ">" arrow; points the other way in right-to-left. */
 export const ChevronIcon = ({ className = 'h-4 w-4' }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.5"
+  <svg viewBox="0 0 24 24" className={`rtl:-scale-x-100 ${className}`} fill="none" stroke="currentColor" strokeWidth="2.5"
     strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="m9 6 6 6-6 6" />
   </svg>
@@ -182,7 +185,7 @@ export function CalorieRing({ progress, remaining }) {
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-4xl font-bold tabular-nums">{fmt0(Math.abs(remaining))}</span>
         <span className={`text-sm ${remaining >= 0 ? muted : fatText}`}>
-          {remaining >= 0 ? 'kcal left' : 'kcal over'}
+          {t(remaining >= 0 ? 'kcal left' : 'kcal over')}
         </span>
       </div>
     </div>
@@ -212,7 +215,7 @@ export function MiniRing({ label, value, goal, color }) {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center leading-tight">
           <span className="text-base font-bold tabular-nums">{fmt0(value)}</span>
-          <span className={`text-[10px] tabular-nums ${muted}`}>/ {fmt0(goal)} g</span>
+          <span className={`text-[10px] tabular-nums ${muted}`}>/ {fmt0(goal)} {t('g')}</span>
         </div>
       </div>
       <span className={`mt-2 text-xs font-medium ${muted}`}>{label}</span>
@@ -227,7 +230,7 @@ export function MacroBar({ label, value, goal, color }) {
     <div>
       <div className="mb-1.5 flex justify-between text-sm">
         <span className="font-medium">{label}</span>
-        <span className={`tabular-nums ${muted}`}>{fmt0(value)} / {fmt0(goal)} g</span>
+        <span className={`tabular-nums ${muted}`}>{fmt0(value)} / {fmt0(goal)} {t('g')}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
         <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
@@ -236,12 +239,13 @@ export function MacroBar({ label, value, goal, color }) {
   )
 }
 
-export const StatTile = ({ title, value, unit }) => (
+export const StatTile = ({ title, value, unit, sub }) => (
   <Card className="flex-1">
     <p className={`text-xs ${muted}`}>{title}</p>
     <p className="mt-1.5 text-2xl font-bold tabular-nums">
       {value} <span className={`text-xs font-normal ${muted}`}>{unit}</span>
     </p>
+    {sub && <p className={`mt-0.5 text-sm tabular-nums ${faint}`}>{sub}</p>}
   </Card>
 )
 
@@ -250,33 +254,113 @@ export const MacroSummary = ({ macros, glow = false }) => {
   const chip = glow ? 'glow-text font-medium' : ''
   return (
     <span className={`flex gap-2.5 text-xs tabular-nums ${glow ? '' : muted}`}>
-      <span className={glow ? `${chip} ${accentText}` : ''}><b className={accentText}>P</b> {fmt1(macros.protein)}</span>
-      <span className={glow ? `${chip} ${carbsText}` : ''}><b className={carbsText}>C</b> {fmt1(macros.carbs)}</span>
-      <span className={glow ? `${chip} ${fatText}` : ''}><b className={fatText}>F</b> {fmt1(macros.fat)}</span>
+      <span className={glow ? `${chip} ${accentText}` : ''}><b className={accentText}>{t('P')}</b> {fmt1(macros.protein)}</span>
+      <span className={glow ? `${chip} ${carbsText}` : ''}><b className={carbsText}>{t('C')}</b> {fmt1(macros.carbs)}</span>
+      <span className={glow ? `${chip} ${fatText}` : ''}><b className={fatText}>{t('F')}</b> {fmt1(macros.fat)}</span>
     </span>
   )
 }
 
 // ---- Sheets & dialogs ------------------------------------------------------
 
-/** Full-screen modal sheet with close / title / action header. */
-export function Sheet({ title, onClose, action, children, z = 'z-40', closeLabel = 'Cancel' }) {
+// One spring for every slide in the app: critically damped (no wobble) and
+// fast to settle, close to iOS page and sheet motion. restDelta/restSpeed end
+// it as soon as the remaining movement is invisible, instead of crawling.
+export const SPRING = { type: 'spring', stiffness: 520, damping: 48, mass: 1, restDelta: 0.5, restSpeed: 10 }
+
+/**
+ * Full-screen sheet driven by framer-motion springs. Two variants:
+ *
+ *  'push'   (default) a pushed page. Springs in from the right; drag from the
+ *           left edge to go back. Mirrored in right-to-left (Arabic).
+ *  'modal'  a bottom sheet (Log Meal). Springs up from the bottom over a dimmed
+ *           backdrop; drag the header down to dismiss, tap the backdrop to close.
+ *
+ * Mount it inside <AnimatePresence>: `exit` plays the slide-out when the
+ * parent stops rendering it. The position is ONE motion value (`pos`), and the
+ * backdrop opacity is derived from it, so the dim follows the sheet with no
+ * React renders while dragging.
+ */
+export function Sheet({ title, onClose, action, children, z = 'z-40', closeLabel = 'Cancel', variant = 'push' }) {
+  const modal = variant === 'modal'
+  const side = isRTL() ? -1 : 1                         // push pages come from the left in right-to-left
+  const reduce = useReducedMotion()
+  const controls = useDragControls()
+  const W = window.innerWidth
+  const H = window.innerHeight
+  const off = modal ? H : W * side
+  const pos = useMotionValue(off)                       // starts off-screen, animates to 0
+  const scrim = useTransform(pos, (p) => 1 - Math.min(Math.max(p / off, 0), 1)) // dim fades as the sheet leaves
+  const transition = reduce ? { duration: 0 } : SPRING
+
+  const release = (_, info) => {
+    const d = modal ? info.offset.y : info.offset.x * side
+    const v = modal ? info.velocity.y : info.velocity.x * side // px/s, towards closing
+    if (d > Math.abs(off) * (modal ? 0.25 : 0.33) || v > 600) onClose()
+  }
+
   return (
-    <div className={`fixed inset-0 ${z} flex flex-col bg-canvas text-zinc-900 dark:bg-black dark:text-white`}>
-      <header
-        className="flex items-center justify-between border-b border-black/5 px-4 pb-3 dark:border-white/10"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}
+    <div className={`fixed inset-0 ${z}`}>
+      <motion.div
+        className="absolute inset-0 bg-black/45"
+        style={{ opacity: scrim }}
+        onClick={modal ? onClose : undefined}
+        aria-hidden="true"
+      />
+      <motion.div
+        className={`absolute flex flex-col overflow-hidden bg-canvas text-zinc-900 will-change-transform dark:bg-black dark:text-white ${
+          modal
+            ? 'inset-x-0 bottom-0 rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.35)] ring-1 ring-black/5 dark:ring-white/10'
+            : `inset-0 ${side > 0 ? 'shadow-[-12px_0_32px_rgba(0,0,0,0.25)]' : 'shadow-[12px_0_32px_rgba(0,0,0,0.25)]'}`
+        }`}
+        // A bottom sheet stops short of the top so the page behind peeks out.
+        style={modal ? { y: pos, top: 'calc(env(safe-area-inset-top) + 10px)' } : { x: pos }}
+        animate={modal ? { y: 0 } : { x: 0 }}
+        exit={modal ? { y: H } : { x: W * side }}
+        transition={transition}
+        drag={modal ? 'y' : 'x'}
+        dragControls={controls}
+        dragListener={false}                 // drags start only from the handle / edge strip below
+        dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
+        dragElastic={modal ? { top: 0.05, bottom: 1 } : side > 0 ? { left: 0, right: 1 } : { left: 1, right: 0 }}
+        dragMomentum={false}                 // we decide on release; a miss springs back
+        dragTransition={{ bounceStiffness: 500, bounceDamping: 40 }}
+        onDragEnd={release}
       >
-        <button onClick={onClose} className={`w-16 text-left ${accentText}`}>{closeLabel}</button>
-        <h1 className="font-semibold">{title}</h1>
-        <div className="w-16 text-right">{action}</div>
-      </header>
-      <div
-        className="mx-auto w-full max-w-md flex-1 space-y-4 overflow-y-auto p-4"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
-      >
-        {children}
-      </div>
+        <header
+          className="border-b border-black/5 dark:border-white/10"
+          style={{
+            paddingTop: modal ? 0 : 'calc(env(safe-area-inset-top) + 12px)',
+            touchAction: modal ? 'none' : undefined,
+          }}
+          onPointerDown={modal ? (e) => { if (!e.target.closest('button')) controls.start(e) } : undefined}
+        >
+          {modal && <div className="mx-auto mt-2 mb-1 h-1 w-9 rounded-full bg-black/15 dark:bg-white/25" />}
+          <div className={`flex items-center justify-between px-4 pb-3 ${modal ? 'pt-1.5' : ''}`}>
+            <button onClick={onClose} className={`w-16 text-start ${accentText}`}>{t(closeLabel)}</button>
+            <h1 className="font-semibold">{title}</h1>
+            <div className="w-16 text-end">{action}</div>
+          </div>
+        </header>
+
+        {/* Left-edge strip (right edge in right-to-left): drag from here to go
+            back (push pages only). It starts below the header so it never
+            covers the Cancel button. */}
+        {!modal && (
+          <div
+            className="absolute bottom-0 start-0 z-10 w-5"
+            style={{ top: 'calc(env(safe-area-inset-top) + 60px)', touchAction: 'none' }}
+            onPointerDown={(e) => controls.start(e)}
+          />
+        )}
+
+        <div
+          className="mx-auto w-full max-w-md flex-1 space-y-4 overflow-y-auto overscroll-contain p-4"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
+        >
+          {children}
+        </div>
+      </motion.div>
     </div>
   )
 }
@@ -304,7 +388,7 @@ export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCance
       <h2 className="text-[17px] font-semibold">{title}</h2>
       <p className={`mt-2 text-sm ${muted}`}>{message}</p>
       <div className="mt-5 flex gap-3">
-        <button onClick={onCancel} className={`flex-1 rounded-2xl py-3 font-medium ${fieldBg}`}>Cancel</button>
+        <button onClick={onCancel} className={`flex-1 rounded-2xl py-3 font-medium ${fieldBg}`}>{t('Cancel')}</button>
         <button onClick={onConfirm} className="flex-1 rounded-2xl bg-royal py-3 font-semibold text-white">{confirmLabel}</button>
       </div>
     </DialogShell>
@@ -324,10 +408,10 @@ export function NameDialog({ title, message, initial = '', confirmLabel, onConfi
       {message && <p className={`mt-2 text-sm ${muted}`}>{message}</p>}
       <TextInput
         value={name} onChange={(e) => setName(e.target.value)}
-        placeholder="Template name" aria-label="Template name" className="mt-4"
+        placeholder={t('Template name')} aria-label={t('Template name')} className="mt-4"
       />
       <div className="mt-4 flex gap-3">
-        <button type="button" onClick={onCancel} className={`flex-1 rounded-2xl py-3 font-medium ${fieldBg}`}>Cancel</button>
+        <button type="button" onClick={onCancel} className={`flex-1 rounded-2xl py-3 font-medium ${fieldBg}`}>{t('Cancel')}</button>
         <button type="submit" disabled={!trimmed} className="flex-1 rounded-2xl bg-royal py-3 font-semibold text-white disabled:opacity-35">
           {confirmLabel}
         </button>

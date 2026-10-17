@@ -68,7 +68,7 @@ export default function MealDividerSheet({ foods, customFoods, templates, onSave
           </p>
         ) : (
           <>
-            <PickedList picked={picked} setPicked={setPicked} />
+            <PickedList picked={picked} setPicked={setPicked} picker={{ foods, customFoods, templates }} />
             <div className="flex items-baseline justify-between border-t border-black/5 pt-3 dark:border-white/10">
               <span className={`text-sm ${muted}`}>{t('Whole batch · {n} g', { n: fmt0(rawGrams) })}</span>
               <span className="text-end">

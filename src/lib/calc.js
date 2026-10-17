@@ -70,6 +70,14 @@ export const nextTrackingDay = (activeDate, now = new Date()) => {
   return dayAfter > today ? dayAfter : today
 }
 
+/** The latest tracking day before `key` that has meals, or null. Deleting
+ *  the active day returns to this day, undoing an accidental Start New Day. */
+export const previousDay = (meals, key) =>
+  meals.reduce((best, meal) => {
+    const d = mealDay(meal)
+    return d < key && (!best || d > best) ? d : best
+  }, null)
+
 // ---- TDEE ----------------------------------------------------------------
 
 export const ACTIVITY = [
@@ -227,6 +235,7 @@ export const periodStats = (meals, activeDate, interval, maintenance = 0) => {
   let bars
   if (!monthly) {
     bars = days.map((d) => ({
+      key: d.key, // daily bars can be selected (and the day deleted) in Analytics
       label: interval === 'Week'
         ? d.date.toLocaleDateString(locale(), { weekday: 'short' })
         : String(d.date.getDate()),

@@ -102,6 +102,20 @@ const AR = {
   'Average Daily Macros': 'متوسط المغذيات اليومية',
   '{logged} of {elapsed} days logged': 'سُجّل {logged} من {elapsed} أيام',
   'No meals logged in this period yet.': 'لا توجد وجبات مسجّلة في هذه الفترة بعد.',
+  'Tap a day to see its details or delete it.': 'اضغط على يوم لعرض تفاصيله أو حذفه.',
+  'No meals logged on this day.': 'لا توجد وجبات مسجّلة في هذا اليوم.',
+  '1 meal': 'وجبة واحدة',
+  '{n} meals': '{n} وجبات',
+  'Delete Day': 'حذف اليوم',
+  'Cheat Day': 'يوم حر',
+  'Mark as Cheat Day': 'تحديد كيوم حر',
+  'Unmark Cheat Day': 'إلغاء تحديد اليوم الحر',
+  'Started a new day by mistake? Deleting this day takes you back to {prev}.':
+    'بدأت يوماً جديداً بالخطأ؟ حذف هذا اليوم يعيدك إلى {prev}.',
+  "This deletes {day} ({meals}) and makes {prev} your current day again, so you can keep logging there. It can't be undone.":
+    'سيُحذف {day} ({meals}) ويعود {prev} ليكون يومك الحالي لتكمل التسجيل فيه. لا يمكن التراجع عن ذلك.',
+  "This permanently deletes {day} and the {meals} logged on it. It can't be undone.":
+    'سيُحذف {day} نهائياً مع الوجبات المسجّلة فيه ({meals}). لا يمكن التراجع عن ذلك.',
 
   // ---- Weight ----
   Current: 'الحالي',
@@ -157,6 +171,13 @@ const AR = {
     'لا توجد عناصر مخصّصة بعد. أضف عناصرك الخاصة، مثل لوح بروتين معيّن.',
   'No custom items match your search.': 'لا توجد عناصر مخصّصة مطابقة لبحثك.',
   '{n} kcal / 100 g': '{n} سعرة / 100 غ',
+  'Saved meal': 'وجبة محفوظة',
+  '1 ingredient': 'مكوّن واحد',
+  '{n} ingredients': '{n} مكوّنات',
+  Done: 'تم',
+  'No ingredients left. Tap Done to remove this meal.': 'لم يتبقَّ أي مكوّن. اضغط «تم» لإزالة هذه الوجبة.',
+  'Changes apply to this meal only. To change the saved meal itself, use the arrow next to it in My Items.':
+    'التعديلات تخص هذه الوجبة فقط. لتعديل الوجبة المحفوظة نفسها، استخدم السهم بجانبها في «عناصري».',
   '· 1 portion {n} g': '· حصة واحدة {n} غ',
 
   // ---- Custom item ----

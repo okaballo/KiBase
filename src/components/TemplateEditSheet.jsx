@@ -34,7 +34,10 @@ export default function TemplateEditSheet({ template, foods, customFoods, templa
       <Card className="space-y-3.5">
         <SectionTitle>{t('Ingredients')}</SectionTitle>
         {picked.length === 0 && <p className={`text-sm ${muted}`}>{t('Add at least one ingredient to keep this meal.')}</p>}
-        <PickedList picked={picked} setPicked={setPicked} />
+        <PickedList
+          picked={picked} setPicked={setPicked}
+          picker={{ foods, customFoods, templates: templates.filter((x) => x.id !== template.id) }}
+        />
       </Card>
 
       <Card>

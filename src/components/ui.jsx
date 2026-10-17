@@ -1,6 +1,7 @@
 // Shared building blocks. Every colour is given for light mode first and for
 // dark mode with a `dark:` variant, so the whole app follows the theme toggle.
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, useDragControls, useMotionValue, useReducedMotion, useTransform } from 'framer-motion'
 import { fmt0, fmt1 } from '../lib/calc.js'
 import { t, isRTL } from '../lib/i18n.js'
@@ -121,6 +122,14 @@ export const ChevronIcon = ({ className = 'h-4 w-4' }) => (
   <svg viewBox="0 0 24 24" className={`rtl:-scale-x-100 ${className}`} fill="none" stroke="currentColor" strokeWidth="2.5"
     strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="m9 6 6 6-6 6" />
+  </svg>
+)
+
+export const PencilIcon = ({ className = 'h-[18px] w-[18px]' }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" />
+    <path d="m13.5 6.5 4 4" />
   </svg>
 )
 
@@ -365,10 +374,18 @@ export function Sheet({ title, onClose, action, children, z = 'z-40', closeLabel
   )
 }
 
-const DialogShell = ({ title, onCancel, children, as: Tag = 'div', ...rest }) => (
+// Rendered into <body> with a portal: the tab pages sit on a transformed
+// (sliding) track, and `position: fixed` inside a transform is positioned
+// against that track instead of the screen, so a dialog opened from any tab
+// but the first would land off-screen. React events still bubble from the
+// portal to the tab pager, so data-no-swipe keeps drags in a dialog from
+// switching tabs.
+const DialogShell = ({ title, onCancel, children, as: Tag = 'div', ...rest }) => createPortal(
   <div
     className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm dark:bg-black/70"
     role="dialog" aria-modal="true" aria-label={title}
+    data-no-swipe
+
     onClick={onCancel}
   >
     <Tag
@@ -378,7 +395,8 @@ const DialogShell = ({ title, onCancel, children, as: Tag = 'div', ...rest }) =>
     >
       {children}
     </Tag>
-  </div>
+  </div>,
+  document.body,
 )
 
 /** Centered confirmation dialog. Cancel is the safe, default-looking choice. */

@@ -1,7 +1,9 @@
 // Pure helpers for the "In This Meal" list in Log Meal.
-// Each entry: { key, food, grams (string, as typed), foodId?, group? }
-//   foodId - set for single foods picked from Database / Custom Items
-//   group  - set for items that came from a saved meal template (its id)
+// Each entry: { key, food, grams (string, as typed), foodId?, group?, groupName? }
+//   foodId    - set for single foods picked from Database / Custom Items
+//   group     - set for items that came from a saved meal template (its id);
+//               they are shown together as one card in the picked list
+//   groupName - that saved meal's name, the card's title
 import { num } from './calc.js'
 
 /** Grams added or removed by one tap on a food's + / − control. */
@@ -28,6 +30,16 @@ export const stepFood = (list, foodId, delta) =>
     const grams = round1(num(p.grams) + delta)
     return grams > 0 ? [{ ...p, grams: String(grams) }] : []
   })
+
+/** Replaces a saved meal's entries with `next`, keeping the card where it
+ *  was in the list. An empty `next` removes the saved meal. */
+export const replaceGroup = (list, groupId, next) => {
+  const at = list.findIndex((p) => p.group === groupId)
+  if (at < 0) return list
+  const rest = list.filter((p) => p.group !== groupId)
+  const pos = list.slice(0, at).filter((p) => p.group !== groupId).length
+  return [...rest.slice(0, pos), ...next, ...rest.slice(pos)]
+}
 
 /**
  * Changes a template from `from` to `to` servings by scaling all of its

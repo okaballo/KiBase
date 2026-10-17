@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { ZERO, add, mealTotals, mealGrams, mealDay, parseDay, num, fmt0 } from '../lib/calc.js'
 import {
-  Card, SectionTitle, PrimaryButton, CalorieRing, MiniRing, MacroSummary, Avatar,
+  Card, SectionTitle, PrimaryButton, CalorieRing, MiniRing, MacroSummary, Avatar, PencilIcon,
   ConfirmDialog, NameDialog, muted, faint, accentText, divider,
 } from '../components/ui.jsx'
 import { t, locale } from '../lib/i18n.js'
@@ -109,12 +109,7 @@ export default function Home({
                     aria-label={t('Edit {name}', { name: meal.name })}
                     className={`p-1 transition active:scale-90 ${faint}`}
                   >
-                    {/* pencil */}
-                    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor"
-                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" />
-                      <path d="m13.5 6.5 4 4" />
-                    </svg>
+                    <PencilIcon />
                   </button>
                   <button
                     onClick={() => setSavingMeal(meal)}

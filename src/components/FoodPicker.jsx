@@ -1,16 +1,21 @@
-// The food picker shared by Log Meal and the Meal Divider.
+// The food picker shared by Log Meal, the Meal Divider and the saved meal editor.
 //
-//   PickedList  - the chosen items, each with an editable grams field
-//   FoodPicker  - Database / My Items lists with "+" buttons that turn into
-//                 "− value +" counters once an item is picked
+//   PickedList      - the chosen items. Single foods are rows with an editable
+//                     grams field; a saved meal is ONE card (edit + remove)
+//   GroupEditSheet  - opened from a card's pencil: change its ingredients'
+//                     grams, remove some, or add more
+//   FoodPicker      - Database / My Items lists with "+" buttons that turn
+//                     into "− value +" counters once an item is picked
 //
 // The picked list itself is owned by the parent screen (see lib/picked.js for
-// the entry shape), so both screens share the same behaviour.
+// the entry shape), so every screen shares the same behaviour.
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
+import { AnimatePresence } from 'framer-motion'
 import { ZERO, add, scale, num, fmt0 } from '../lib/calc.js'
-import { STEP_GRAMS, stepFood, scaleGroup } from '../lib/picked.js'
+import { STEP_GRAMS, stepFood, scaleGroup, replaceGroup } from '../lib/picked.js'
 import {
-  MacroSummary, Segmented, TextInput, AddButton, Stepper, ChevronIcon,
+  Card, SectionTitle, Sheet, MacroSummary, Segmented, TextInput, AddButton, Stepper, ChevronIcon, PencilIcon,
   muted, faint, accentText, fieldBg, divider,
 } from './ui.jsx'
 import { t } from '../lib/i18n.js'
@@ -20,37 +25,181 @@ const newKey = () => crypto.randomUUID()
 /** Default grams for a newly picked food: its saved portion size, else 100 g. */
 const defaultGrams = (food) => String(food.servingGrams > 0 ? food.servingGrams : 100)
 
-/** Chosen items with editable grams and a remove button. */
-export function PickedList({ picked, setPicked }) {
-  const setGrams = (key, grams) => setPicked((list) => list.map((p) => (p.key === key ? { ...p, grams } : p)))
-  return picked.map((p) => {
-    const macros = scale(p.food, num(p.grams))
-    return (
-      <div key={p.key} className="flex items-center gap-2">
+const totalsOf = (entries) => entries.reduce((sum, p) => add(sum, scale(p.food, num(p.grams))), ZERO)
+
+/**
+ * Chosen items. Single foods are rows with an editable grams field; the
+ * items of a saved meal are grouped into one card with edit and remove
+ * buttons. `flat` lists every item as a row (used inside the card editor).
+ * `picker` ({ foods, customFoods, templates }) feeds the card editor's own
+ * picker, so more items can be added to a saved meal.
+ */
+export function PickedList({ picked, setPicked, picker, flat = false }) {
+  const [editing, setEditing] = useState(null) // group id of the card being edited
+
+  // Rows in list order; a saved meal appears once, where its first item is.
+  const rows = []
+  const seen = new Set()
+  for (const p of picked) {
+    if (flat || !p.group) rows.push({ key: p.key, entry: p })
+    else if (!seen.has(p.group)) {
+      seen.add(p.group)
+      rows.push({ key: `group-${p.group}`, group: p.group, entries: picked.filter((x) => x.group === p.group) })
+    }
+  }
+  const editingEntries = editing ? picked.filter((p) => p.group === editing) : []
+
+  return (
+    <>
+      {rows.map((row) =>
+        row.group ? (
+          <SavedMealCard
+            key={row.key} entries={row.entries}
+            onEdit={() => setEditing(row.group)}
+            onRemove={() => setPicked((list) => list.filter((p) => p.group !== row.group))}
+          />
+        ) : (
+          <PickedRow key={row.key} entry={row.entry} setPicked={setPicked} />
+        ),
+      )}
+      {/* Portal: this list sits inside a sliding sheet, and a fixed-position
+          sheet inside a transformed parent would be clipped to it. */}
+      {createPortal(
+        <AnimatePresence>
+          {editingEntries.length > 0 && (
+            <GroupEditSheet
+              key={editing}
+              groupId={editing} entries={editingEntries} picker={picker}
+              onSave={(next) => setPicked((list) => replaceGroup(list, editing, next))}
+              onClose={() => setEditing(null)}
+            />
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
+    </>
+  )
+}
+
+/** A saved meal in the picked list: name, ingredients, totals, edit and remove. */
+function SavedMealCard({ entries, onEdit, onRemove }) {
+  const name = entries[0].groupName || t('Saved meal')
+  const totals = totalsOf(entries)
+  const grams = entries.reduce((g, p) => g + num(p.grams), 0)
+  return (
+    <div className={`rounded-2xl p-3 ${fieldBg}`}>
+      <div className="flex items-start gap-1">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{t(p.food.name)}</p>
-          <div className="flex flex-wrap gap-x-2 text-xs">
-            <span className={`tabular-nums ${accentText}`}>{fmt0(macros.calories)} {t('kcal')}</span>
-            <MacroSummary macros={macros} />
-          </div>
+          <p className="truncate text-sm font-semibold">{name}</p>
+          <p className={`text-xs ${muted}`}>
+            {t('Saved meal')} · {entries.length === 1 ? t('1 ingredient') : t('{n} ingredients', { n: entries.length })}
+            {' · '}{fmt0(grams)} {t('g')}
+          </p>
         </div>
-        <input
-          inputMode="decimal" value={p.grams}
-          onChange={(e) => setGrams(p.key, e.target.value)}
-          aria-label={t('Grams of {name}', { name: t(p.food.name) })}
-          className={`w-16 rounded-lg px-2 py-2 text-end tabular-nums outline-none ${fieldBg}`}
-        />
-        <span className={muted}>{t('g')}</span>
-        <button
-          onClick={() => setPicked((list) => list.filter((x) => x.key !== p.key))}
-          aria-label={t('Remove {name}', { name: t(p.food.name) })}
-          className={`px-1 text-xl leading-none ${faint}`}
-        >
+        <button onClick={onEdit} aria-label={t('Edit {name}', { name })} className={`p-1 transition active:scale-90 ${accentText}`}>
+          <PencilIcon />
+        </button>
+        <button onClick={onRemove} aria-label={t('Remove {name}', { name })} className={`px-1 text-xl leading-none ${faint}`}>
           ×
         </button>
       </div>
-    )
-  })
+      <p className={`mt-1.5 line-clamp-2 text-xs ${faint}`}>
+        {entries.map((p) => `${fmt0(num(p.grams))} ${t('g')} ${t(p.food.name)}`).join(' · ')}
+      </p>
+      <div className="mt-1.5 flex flex-wrap gap-x-2 text-xs">
+        <span className={`font-semibold tabular-nums ${accentText}`}>{fmt0(totals.calories)} {t('kcal')}</span>
+        <MacroSummary macros={totals} />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Edits one saved meal card: ingredient grams, removing ingredients and
+ * adding more from the Database / My Items. Works on a copy and only writes
+ * back on Done. It changes this meal only, not the saved meal in My Items.
+ */
+function GroupEditSheet({ groupId, entries, picker, onSave, onClose }) {
+  const name = entries[0].groupName || t('Saved meal')
+  // foodId is dropped so the single-food +/− counters outside never grab a
+  // saved meal's ingredient; inside, added foods get their own foodId.
+  const [items, setItems] = useState(() => entries.map(({ key, food, grams }) => ({ key, food, grams })))
+  const totals = totalsOf(items)
+  const canSave = items.every((p) => num(p.grams) > 0)
+
+  const done = () => {
+    onSave(items.map(({ key, food, grams }) => ({ key, food, grams, group: groupId, groupName: entries[0].groupName })))
+    onClose()
+  }
+
+  return (
+    <Sheet
+      title={name} onClose={onClose} z="z-[55]"
+      action={<button onClick={done} disabled={!canSave} className={`font-semibold disabled:opacity-35 ${accentText}`}>{t('Done')}</button>}
+    >
+      <Card className="space-y-3.5">
+        <SectionTitle>{t('Ingredients')}</SectionTitle>
+        {items.length === 0
+          ? <p className={`text-sm ${muted}`}>{t('No ingredients left. Tap Done to remove this meal.')}</p>
+          : <PickedList picked={items} setPicked={setItems} flat />}
+      </Card>
+
+      <Card>
+        <div className="flex items-baseline justify-between">
+          <SectionTitle>{t('Total')}</SectionTitle>
+          <p className={`text-2xl font-bold tabular-nums ${accentText}`}>
+            {fmt0(totals.calories)} <span className={`text-xs font-normal ${muted}`}>{t('kcal')}</span>
+          </p>
+        </div>
+        <div className="mt-2"><MacroSummary macros={totals} /></div>
+      </Card>
+
+      <p className={`-mb-1 px-1 text-xs ${muted}`}>
+        {t('Changes apply to this meal only. To change the saved meal itself, use the arrow next to it in My Items.')}
+      </p>
+      {picker && (
+        <Card className="space-y-3">
+          <SectionTitle>{t('Add Ingredients')}</SectionTitle>
+          <FoodPicker
+            foods={picker.foods} customFoods={picker.customFoods}
+            templates={picker.templates.filter((x) => x.id !== groupId)}
+            picked={items} setPicked={setItems}
+          />
+        </Card>
+      )}
+    </Sheet>
+  )
+}
+
+/** A single food in the picked list: name, macros, grams field and remove. */
+function PickedRow({ entry: p, setPicked }) {
+  const setGrams = (grams) => setPicked((list) => list.map((x) => (x.key === p.key ? { ...x, grams } : x)))
+  const macros = scale(p.food, num(p.grams))
+  return (
+    <div className="flex items-center gap-2">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{t(p.food.name)}</p>
+        <div className="flex flex-wrap gap-x-2 text-xs">
+          <span className={`tabular-nums ${accentText}`}>{fmt0(macros.calories)} {t('kcal')}</span>
+          <MacroSummary macros={macros} />
+        </div>
+      </div>
+      <input
+        inputMode="decimal" value={p.grams}
+        onChange={(e) => setGrams(e.target.value)}
+        aria-label={t('Grams of {name}', { name: t(p.food.name) })}
+        className={`w-16 rounded-lg px-2 py-2 text-end tabular-nums outline-none ${fieldBg}`}
+      />
+      <span className={muted}>{t('g')}</span>
+      <button
+        onClick={() => setPicked((list) => list.filter((x) => x.key !== p.key))}
+        aria-label={t('Remove {name}', { name: t(p.food.name) })}
+        className={`px-1 text-xl leading-none ${faint}`}
+      >
+        ×
+      </button>
+    </div>
+  )
 }
 
 /** One list row: name (with optional ">" edit arrow), details, and a control. */
@@ -80,7 +229,7 @@ const SubHeading = ({ children }) => (
 
 export function FoodPicker({
   foods, customFoods, templates, picked, setPicked,
-  onEditCustom, onEditTemplate, onTemplateLoaded, actions,
+  onEditCustom, onEditTemplate, actions,
 }) {
   const [search, setSearch] = useState('')
   const [view, setView] = useState('Database')
@@ -113,10 +262,9 @@ export function FoodPicker({
   const loadTemplate = (tpl) => {
     setPicked((list) => [
       ...list,
-      ...tpl.items.map((item) => ({ key: newKey(), food: item, grams: String(item.grams), group: tpl.id })),
+      ...tpl.items.map((item) => ({ key: newKey(), food: item, grams: String(item.grams), group: tpl.id, groupName: tpl.name })),
     ])
     setServings((s) => ({ ...s, [tpl.id]: 1 }))
-    onTemplateLoaded?.(tpl)
   }
   const stepTemplate = (tpl, delta) => {
     const from = servingsOf(tpl)

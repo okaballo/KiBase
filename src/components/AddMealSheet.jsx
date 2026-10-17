@@ -33,8 +33,13 @@ export default function AddMealSheet({
   const totals = picked.reduce((sum, p) => add(sum, scale(p.food, num(p.grams))), ZERO)
   const canSave = picked.length > 0 && picked.every((p) => num(p.grams) > 0)
 
+  // Used when the name field is left empty: each saved meal card by its name
+  // (once), each single item by its own name, e.g. "Oat bowl, Protein shake".
+  const autoName = [...new Set(picked.map((p) => (p.group ? p.groupName : t(p.food.name))))]
+    .filter(Boolean)
+    .join(', ')
+
   const save = () => {
-    const autoName = picked.map((p) => t(p.food.name)).join(' + ')
     onSave(
       editing
         ? { ...meal, name: name.trim() || autoName, items: toItems(picked) } // keeps id, date, day
@@ -52,13 +57,17 @@ export default function AddMealSheet({
         <button onClick={save} disabled={!canSave} className={`font-semibold disabled:opacity-35 ${accentText}`}>{t('Save')}</button>
       }
     >
-      <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder={t('Meal name (optional)')} />
+      {/* The placeholder previews the name the meal gets if this stays empty. */}
+      <TextInput
+        value={name} onChange={(e) => setName(e.target.value)}
+        placeholder={autoName || t('Meal name (optional)')} aria-label={t('Meal name (optional)')}
+      />
 
       {picked.length > 0 && (
         <>
           <Card className="space-y-3.5">
             <SectionTitle>{t(editing ? 'Items in This Meal' : 'In This Meal')}</SectionTitle>
-            <PickedList picked={picked} setPicked={setPicked} />
+            <PickedList picked={picked} setPicked={setPicked} picker={{ foods, customFoods, templates }} />
           </Card>
 
           <Card>
@@ -88,7 +97,6 @@ export default function AddMealSheet({
           foods={foods} customFoods={customFoods} templates={templates}
           picked={picked} setPicked={setPicked}
           onEditCustom={onEditCustom} onEditTemplate={onEditTemplate}
-          onTemplateLoaded={(tpl) => setName((current) => current || tpl.name)}
           actions={
             <div className="grid grid-cols-2 gap-2">
               <ToolButton onClick={onCreateCustom} icon="+">{t('Create a custom meal')}</ToolButton>

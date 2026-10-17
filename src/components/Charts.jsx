@@ -10,11 +10,15 @@ const BOTTOM = 24 // room for x-axis labels
 const TOP = 14
 
 /**
- * Calorie bars with a dashed goal line. `bars` are { label, value }.
+ * Calorie bars with a dashed goal line. `bars` are { label, value, key? }.
  * Works for 7 to ~31 bars: with many bars they get thinner and only every
  * few x-axis labels are drawn so they never overlap.
+ *
+ * Pass `onSelect` to make bars that have a `key` tappable (the whole column,
+ * so empty days can be picked too). The `selected` key is highlighted and the
+ * other bars are dimmed. Bars with `cheat: true` use the red/blue cheat day gradient.
  */
-export function BarChart({ bars, goal, label = 'Calories chart' }) {
+export function BarChart({ bars, goal, label = 'Calories chart', selected = null, onSelect }) {
   const max = Math.max(goal, ...bars.map((d) => d.value), 1) * 1.15
   const plotH = H - TOP - BOTTOM
   const y = (v) => TOP + plotH * (1 - v / max)
@@ -24,11 +28,15 @@ export function BarChart({ bars, goal, label = 'Calories chart' }) {
   const labelEvery = Math.ceil(bars.length / 12) // at most 12 labels
 
   return (
-    <svg dir="ltr" viewBox={`0 0 ${W} ${H}`} className="w-full text-zinc-900 dark:text-white" role="img" aria-label={label}>
+    <svg dir="ltr" viewBox={`0 0 ${W} ${H}`} className="w-full text-zinc-900 dark:text-white" role={onSelect ? 'group' : 'img'} aria-label={label}>
       <defs>
         <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#b58ff2" />
           <stop offset="1" stopColor="#7851a9" />
+        </linearGradient>
+        <linearGradient id="bar-cheat" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#FF3547" />
+          <stop offset="1" stopColor="#6039AA" />
         </linearGradient>
         {/* Soft neon halo behind the bars. */}
         <filter id="bar-glow" filterUnits="userSpaceOnUse" x="0" y="0" width={W} height={H}>
@@ -50,11 +58,18 @@ export function BarChart({ bars, goal, label = 'Calories chart' }) {
       {bars.map((d, i) => {
         const x = LEFT + slot * i + (slot - barW) / 2
         const h = Math.max(y(0) - y(d.value), 0)
+        const isSelected = selected !== null && d.key === selected
+        const dimmed = selected !== null && !isSelected
         return (
-          <g key={i}>
-            {h > 0 && <rect x={x} y={y(d.value)} width={barW} height={h} rx={radius} fill="url(#bar)" filter="url(#bar-glow)" />}
-            {i % labelEvery === 0 && (
-              <text x={x + barW / 2} y={H - 7} textAnchor="middle" fontSize="10" fill="currentColor" fillOpacity=".6">
+          <g key={i} opacity={dimmed ? 0.4 : 1} style={{ transition: 'opacity .2s' }}>
+            {isSelected && (
+              <rect x={LEFT + slot * i + 1} y={TOP - 4} width={slot - 2} height={H - TOP - 4} rx={6}
+                fill="currentColor" fillOpacity=".07" />
+            )}
+            {h > 0 && <rect x={x} y={y(d.value)} width={barW} height={h} rx={radius} fill={d.cheat ? 'url(#bar-cheat)' : 'url(#bar)'} filter="url(#bar-glow)" />}
+            {(i % labelEvery === 0 || isSelected) && (
+              <text x={x + barW / 2} y={H - 7} textAnchor="middle" fontSize="10" fill="currentColor"
+                fillOpacity={isSelected ? 1 : 0.6} fontWeight={isSelected ? 700 : 400}>
                 {d.label}
               </text>
             )}
@@ -70,6 +85,19 @@ export function BarChart({ bars, goal, label = 'Calories chart' }) {
           </text>
         </g>
       )}
+
+      {/* Invisible full-height tap targets, drawn last so they sit on top. */}
+      {onSelect && bars.map((d, i) => d.key && (
+        <rect
+          key={`hit-${d.key}`}
+          x={LEFT + slot * i} y={0} width={slot} height={H} fill="transparent"
+          role="button" tabIndex={0} style={{ cursor: 'pointer', outline: 'none' }}
+          aria-label={`${d.label}: ${fmt0(d.value)} ${t('kcal')}${d.cheat ? `, ${t('Cheat Day')}` : ''}`}
+          aria-pressed={d.key === selected}
+          onClick={() => onSelect(d.key === selected ? null : d.key)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(d.key) } }}
+        />
+      ))}
     </svg>
   )
 }

@@ -18,7 +18,7 @@ import { useDrag } from '@use-gesture/react'
 import { SPRING } from './components/ui.jsx'
 import { useLocalStorage } from './lib/useLocalStorage.js'
 import { SEED_FOODS } from './lib/foods.js'
-import { dayKey, nextTrackingDay } from './lib/calc.js'
+import { dayKey, nextTrackingDay, mealDay, previousDay } from './lib/calc.js'
 import { setLanguage, t } from './lib/i18n.js'
 import Home from './tabs/Home.jsx'
 import Analytics from './tabs/Analytics.jsx'
@@ -127,6 +127,7 @@ export default function App() {
   const [customFoods, setCustomFoods] = useLocalStorage('mt.customFoods', [])
   const [templates, setTemplates] = useLocalStorage('mt.templates', [])
   const [weights, setWeights] = useLocalStorage('mt.weights', [])
+  const [cheatDays, setCheatDays] = useLocalStorage('mt.cheatDays', []) // 'YYYY-MM-DD' keys
 
   // Older saves have no `name`, so fill any missing fields from the defaults.
   const profile = useMemo(() => ({ ...DEFAULT_PROFILE, ...storedProfile }), [storedProfile])
@@ -147,6 +148,20 @@ export default function App() {
   })
   const startNewDay = () =>
     setActiveDay((current) => ({ date: nextTrackingDay(current.date), startedAt: new Date().toISOString() }))
+
+  // Deletes a tracking day: all of its meals. Deleting the day in progress
+  // also goes back to the previous day that has meals, so an accidental
+  // Start New Day can be undone and logging continues on that day.
+  const deleteDay = (key) => {
+    if (key === activeDay.date) {
+      const prev = previousDay(meals, key)
+      if (prev) setActiveDay({ date: prev, startedAt: new Date().toISOString() })
+    }
+    setMeals((list) => list.filter((m) => mealDay(m) !== key))
+    setCheatDays((list) => list.filter((d) => d !== key))
+  }
+  const toggleCheatDay = (key) =>
+    setCheatDays((list) => (list.includes(key) ? list.filter((d) => d !== key) : [...list, key]))
 
   // Theme: toggling the `dark` class on <html> switches every `dark:` variant.
   useEffect(() => {
@@ -339,7 +354,8 @@ export default function App() {
         onDeleteMeal={(id) => setMeals((list) => list.filter((m) => m.id !== id))}
       />
     ),
-    Analytics: <Analytics profile={planProfile} meals={meals} activeDay={activeDay} />,
+    Analytics: <Analytics profile={planProfile} meals={meals} activeDay={activeDay} onDeleteDay={deleteDay}
+      cheatDays={cheatDays} onToggleCheatDay={toggleCheatDay} />,
     Weight: (
       <Weight
         entries={weights}
@@ -357,7 +373,7 @@ export default function App() {
       />
     ),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [profile, planProfile, avatar, meals, activeDay, weights, theme, lang])
+  }), [profile, planProfile, avatar, meals, activeDay, weights, cheatDays, theme, lang])
 
   return (
     // fixed + inset-0 pins the app to the real screen edges. A height of 100%
